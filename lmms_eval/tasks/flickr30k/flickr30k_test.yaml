@@ -1,4 +1,4 @@
-dataset_path: lmms-lab/flickr30k
+dataset_path: /leonardo_scratch/fast/EUHPC_D18_005/david/hf-datasets-cache/flickr30k
 dataset_kwargs:
   token: True
 task : "flickr30k_test"
