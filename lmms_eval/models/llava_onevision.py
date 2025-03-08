@@ -83,7 +83,7 @@ class Llava_OneVision(lmms):
         max_frames_num: Optional[int] = 32,
         mm_spatial_pool_stride: Optional[int] = 2,
         mm_spatial_pool_mode: Optional[str] = "bilinear",
-        token_strategy: Optional[str] = "single",  # could be "single" or "multiple", "multiple" denotes adding multiple <image> tokens for each frame
+        token_strategy: Optional[str] = "multiple",  # could be "single" or "multiple", "multiple" denotes adding multiple <image> tokens for each frame
         video_decode_backend: str = "decord",
         **kwargs,
     ) -> None:
@@ -552,6 +552,9 @@ class Llava_OneVision(lmms):
                 gen_kwargs.pop("image_aspect_ratio")
             try:
                 with torch.inference_mode():
+                    if self.token_strategy == "multiple":
+                        # conver to list if multiple image tokens have been added
+                        image_tensor = [image_tensor[0][i] for i in range(image_tensor[0].size(0))]
                     cont = self.model.generate(input_ids, attention_mask=attention_masks, pad_token_id=pad_token_ids, images=image_tensor, use_cache=self.use_cache, **gen_kwargs)
                     # cont = self.model.generate(qwen_input_ids, pad_token_id=pad_token_ids, images=image_tensor, use_cache=self.use_cache, **gen_kwargs)
 
