@@ -1,4 +1,4 @@
-dataset_path: /leonardo_work/EUHPC_D18_005/david/hf-datasets-cache/datasets/lmms-lab___video-mme
+dataset_path: lmms-lab/Video-MME
 dataset_kwargs:
   token: True
   cache_dir: videomme

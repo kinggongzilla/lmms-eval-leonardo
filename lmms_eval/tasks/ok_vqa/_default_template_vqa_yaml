@@ -1,4 +1,4 @@
-dataset_path: /leonardo_scratch/fast/EUHPC_D18_005/david/hf-datasets-cache/OK-VQA
+dataset_path: lmms-lab/OK-VQA
 output_type: generate_until
 doc_to_visual: !function utils.ok_vqa_doc_to_visual
 doc_to_text: !function utils.ok_vqa_doc_to_text

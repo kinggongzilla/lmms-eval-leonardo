@@ -1,4 +1,4 @@
-dataset_path: /leonardo_scratch/fast/EUHPC_D18_005/david/hf-datasets-cache/MMMU
+dataset_path: lmms-lab/MMMU
 task: "mmmu_test"
 test_split: test
 output_type: generate_until
