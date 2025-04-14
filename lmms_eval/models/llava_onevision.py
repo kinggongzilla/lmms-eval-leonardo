@@ -17,6 +17,7 @@ from decord import VideoReader, cpu
 from packaging import version
 from tqdm import tqdm
 from transformers import AutoConfig
+import os
 
 from lmms_eval import utils
 from lmms_eval.api.instance import Instance
@@ -80,11 +81,16 @@ class Llava_OneVision(lmms):
         use_cache: Optional[bool] = True,
         truncate_context: Optional[bool] = False,  # whether to truncate the context in generation, set it False for LLaVA-1.6
         customized_config: Optional[str] = None,  # ends in json
-        max_frames_num: Optional[int] = 32,
+        max_frames_num: Optional[int] = 32, # 32
         mm_spatial_pool_stride: Optional[int] = 2,
         mm_spatial_pool_mode: Optional[str] = "bilinear",
-        token_strategy: Optional[str] = "multiple",  # could be "single" or "multiple", "multiple" denotes adding multiple <image> tokens for each frame
+        token_strategy: Optional[str] = "single",  # could be "single" or "multiple", "multiple" denotes adding multiple <image> tokens for each frame
         video_decode_backend: str = "decord",
+        # video_decode_backend: str = "pyav",
+        # Wei code
+        sampling_mode = None,
+        sampling_start_layer = None, #
+        keep_ratio = None,
         **kwargs,
     ) -> None:
         super().__init__()
@@ -120,6 +126,11 @@ class Llava_OneVision(lmms):
         self.mm_spatial_pool_stride = mm_spatial_pool_stride
         self.mm_spatial_pool_mode = mm_spatial_pool_mode
         self.video_decode_backend = video_decode_backend
+
+        # Wei code
+        self.sampling_mode = sampling_mode
+        self.sampling_start_layer = int(sampling_start_layer)
+        self.keep_ratio = float(keep_ratio)
 
         overwrite_config = {}
         overwrite_config["mm_spatial_pool_stride"] = self.mm_spatial_pool_stride
@@ -406,7 +417,7 @@ class Llava_OneVision(lmms):
 
         origin_image_aspect_ratio = getattr(self._config, "image_aspect_ratio", None)
 
-        for chunk in chunks:
+        for chunk_id, chunk in enumerate(chunks):
             batched_contexts, all_gen_kwargs, batched_doc_to_visual, batched_doc_id, batched_task, batched_split = zip(*chunk)
             task = batched_task[0]
             split = batched_split[0]
@@ -463,6 +474,11 @@ class Llava_OneVision(lmms):
 
                     elif type(visual[0]) == str:  # For video task
                         image_tensor = []
+                        # if not os.path.exists(visual[0]):
+                        #     head, tail = os.path.split(visual[0])
+                        #     visual[0] = os.path.join( head.replace( 'frames_fps3_hq',  'video_fps3_hq_segment') , tail)
+                        #     print(f'video path changed to {visual[0]}' )
+                        #     assert os.path.exists(visual[0])
                         try:
                             if self.video_decode_backend == "decord":
                                 frames = self.load_video(visual, self.max_frames_num)
@@ -472,7 +488,9 @@ class Llava_OneVision(lmms):
                             image_tensor.append(frames)
                         except Exception as e:
                             eval_logger.error(f"Error {e} in loading video")
+                            raise Exception
                             image_tensor = None
+
 
                         task_type = "video"
                         placeholder_count = len(frames) if self.token_strategy == "multiple" else 1
@@ -543,9 +561,18 @@ class Llava_OneVision(lmms):
                 stopping_criteria = KeywordsStoppingCriteria(keywords, self.tokenizer, input_ids)
                 gen_kwargs["modalities"] = ["video"]
                 gen_kwargs["stopping_criteria"] = [stopping_criteria]
+
                 self._config.mm_spatial_pool_stride = self.mm_spatial_pool_stride
                 self._config.mm_spatial_pool_mode = self.mm_spatial_pool_mode
-
+            # Begin Wei code
+            # gen_kwargs['visual'] = [(visualpath, chunk_id) if isinstance(visualpath, str) else (None, chunk_id) for visualpath in visual]
+            gen_kwargs['my_sampling_params'] =  {
+                'visual':  [(visualpath, chunk_id) if isinstance(visualpath, str) else (None, chunk_id) for visualpath in visual],
+                    "sampling_mode": self.sampling_mode,
+                    "sampling_start_layer": self.sampling_start_layer,
+                    "keep_ratio": self.keep_ratio,
+                }
+            # End Wei code
             # These steps are not in LLaVA's original code, but are necessary for generation to work
             # TODO: attention to this major generation step...
             if "image_aspect_ratio" in gen_kwargs.keys():
