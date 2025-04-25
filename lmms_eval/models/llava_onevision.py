@@ -567,7 +567,7 @@ class Llava_OneVision(lmms):
             # Begin Wei code
             # gen_kwargs['visual'] = [(visualpath, chunk_id) if isinstance(visualpath, str) else (None, chunk_id) for visualpath in visual]
             gen_kwargs['my_sampling_params'] =  {
-                'visual':  [(visualpath, chunk_id) if isinstance(visualpath, str) else (None, chunk_id) for visualpath in visual],
+                'visual': (None, chunk_id) if visual is None else [(visualpath, chunk_id) if isinstance(visualpath, str) else (None, chunk_id) for visualpath in visual],
                     "sampling_mode": self.sampling_mode,
                     "sampling_start_layer": self.sampling_start_layer,
                     "keep_ratio": self.keep_ratio,
