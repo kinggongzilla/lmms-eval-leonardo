@@ -28,6 +28,7 @@ AVAILABLE_MODELS = {
     "llama_vid": "LLaMAVid",
     "llama_vision": "LlamaVision",
     "llava": "Llava",
+    "llava_cot": "Llava_COT",
     "llava_hf": "LlavaHf",
     "llava_onevision": "Llava_OneVision",
     "llava_onevision_moviechat": "Llava_OneVision_MovieChat",
