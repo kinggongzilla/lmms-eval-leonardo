@@ -37,7 +37,7 @@ class Llava_COT(lmms):
         device: Optional[str] = "cuda:0",
         batch_size: Optional[Union[int, str]] = 1,
         beam_size: Optional[int] = 2,
-        generation_type: Optional[str] = "stage",
+        generation_type: Optional[str] = "single", # "stage",
         **kwargs,
     ):
         super().__init__()
@@ -100,6 +100,8 @@ class Llava_COT(lmms):
 
         for instance in requests:
             prompt, gen_kwargs, doc_to_visual, doc_id, task, split = instance.args
+            print("prompt: ")
+            print(prompt)
             visual = doc_to_visual(self.task_dict[task][split][doc_id])
 
             image = visual[0] if isinstance(visual, list) else visual
@@ -113,6 +115,8 @@ class Llava_COT(lmms):
 
             text = self._generate_cot(prompt, image)
             results.append(text)
+            print("text from generate_until: ")
+            print(text)
             pbar.update(1)
 
         pbar.close()
@@ -161,6 +165,7 @@ class Llava_COT(lmms):
         print("Image Type:", type(image))  # Debugging print
         inputs = self.processor(image, input_text, return_tensors='pt').to(self.device)
         print("Inputs Type:", type(inputs))  # Debugging print
+        print("Generation type: ", self.generation_type)
         if self.generation_type == "stage":
             return self._stage_beam(prompt, image, inputs)
         else:
@@ -168,7 +173,18 @@ class Llava_COT(lmms):
 
     def _single_pass(self, prompt, image, inputs):
         output = self.model.generate(**inputs, max_new_tokens=1024)
-        return self.processor.decode(output[0][inputs['input_ids'].shape[1]:], skip_special_tokens=True)
+        final_output = self.processor.decode(output[0][inputs['input_ids'].shape[1]:], skip_special_tokens=True)
+        print("Final output single pass: ")
+        
+        match = re.search(r'<CONCLUSION>(.*?)</CONCLUSION>', final_output)
+        if match:
+            # Extract the content and remove spaces
+            conclusion_content = match.group(1).replace(" ", "")
+            final_output = conclusion_content
+        else:
+            raise ValueError('NO <CONCLUSION> tags found!') 
+        print(final_output)
+        return final_output
 
     def _stage_beam(self, prompt, image, inputs):
         stages = ['<SUMMARY>', '<CAPTION>', '<REASONING>', '<CONCLUSION>']
@@ -204,6 +220,8 @@ class Llava_COT(lmms):
             initial_len = len(input_ids[0])  # Update for next stage
 
         final_output = self.tokenizer.decode(input_ids[0], skip_special_tokens=True)
+        print("Final output stage beam: ")
+        print(final_output)
         return final_output
 
 
