@@ -41,6 +41,8 @@ class Llava_COT(lmms):
         **kwargs,
     ):
         super().__init__()
+        print("lmms-eval kwargs")
+        print(kwargs)
 
         accelerator_kwargs = InitProcessGroupKwargs(timeout=timedelta(weeks=52))
         accelerator = Accelerator(kwargs_handlers=[accelerator_kwargs])
@@ -53,8 +55,10 @@ class Llava_COT(lmms):
         self.model = MllamaForConditionalGeneration.from_pretrained(
             pretrained,
             torch_dtype=torch.bfloat16,
-            device_map="auto"
+            device_map="auto",
         ).eval()
+
+        self.model.keep_ratio = kwargs["keep_ratio"]
 
         self.model.to(self._device)
 
